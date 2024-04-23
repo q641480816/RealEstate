@@ -1,23 +1,39 @@
-import logo from './logo.svg';
-import './App.css';
+import './index.css';
+import AppBar from '@mui/material/AppBar';
+import Nav from './nav';
+import MyAsset from './mainPages/myAsset';
+import BrowseHistory from './mainPages/bHistory';
+import HotSale from './mainPages/hotSale';
+import { useSelector } from 'react-redux'
 
-function App() {
+const App = () => {
+  const currentNav = useSelector(state => state.nav.currentNav);
+
+  const renderMain = () => {
+    switch (currentNav) {
+      case 'hs':
+          return <HotSale />
+      case 'ma':
+          return <MyAsset />
+      case 'bh':
+          return <BrowseHistory />
+    }
+  }
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+    <div id='home'>
+      <div id='header'>
+        <AppBar className='fullfil flex-column' position="static" style={{ justifyContent: 'center' }}>
+          <span style={{ fontSize: '30px', marginLeft: '30px' }}>Real Estate</span>
+        </AppBar>
+      </div>
+      <div id='home-body'>
+
+        <Nav />
+        <div id='main'>
+          {renderMain()}
+        </div>
+      </div>
     </div>
   );
 }
