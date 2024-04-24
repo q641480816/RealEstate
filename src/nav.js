@@ -7,12 +7,12 @@ import { useSelector, useDispatch } from 'react-redux'
 import { setCurrent } from './redux/navSlice';
 
 const Nav = () => {
-    const navItems = useSelector(state => Object.values(state.nav.navs));
+    const navItems = useSelector(state => state.nav.navs);
     const dispatch = useDispatch()
 
     return (<div id='nav'>
         <List>
-            {navItems.map((navItem, i) => (
+            {Object.values(navItems).map((navItem, i) => (
                 <ListItem key={navItem.name + i} disablePadding onClick={() => dispatch(setCurrent(navItem.id))}>
                     <ListItemButton>
                         <ListItemText primary={navItem.name} />

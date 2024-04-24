@@ -6,9 +6,13 @@ import Card from '@mui/material/Card';
 import Typography from '@mui/material/Typography';
 import CardContent from '@mui/material/CardContent';
 import { Button } from '@mui/material';
+import '../index.css';
 
 import img from '../resources/img.jpg';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useSelector } from 'react-redux';
+
+import SmartContactController from '../smartContractController';
 
 const saleList = [];
 
@@ -32,10 +36,27 @@ for (let i = 0; i < 4; i++) {
     })
 }
 
-console.log(saleList);
-
-const HotSale = () => {
+const HotSale = (props) => {
     const [colleps, setColleps] = useState(saleList.map(i => false));
+    const wallet = useSelector(state => state.wallet.addr);
+    const properties = useSelector(state => state.property.properties);
+
+    const smartContractController = SmartContactController();
+
+    useEffect(() => {
+
+    }, [properties]);
+
+    useEffect(() => {
+        if (wallet) {
+
+        }
+    }, [wallet]);
+
+    const getDeals = () => {
+        // provider.reque
+
+    }
 
     const renderDeals = (list) => {
         return (<List>
@@ -70,7 +91,7 @@ const HotSale = () => {
             Hot sale
         </Typography>
         <List>
-            {saleList.map((sli, i) => (
+            {properties.map((sli, i) => (
                 <div style={{ marginBottom: '20px' }} className='flex-column'>
                     <Card className='flex-row'>
                         <img src={img} style={{ height: '200px' }} />
