@@ -6,9 +6,9 @@ import propertyCContractJson from './abi/PROPERTYC.json';
 import propertyDContractJson from './abi/PROPERTYD.json';
 import sgdContractJson from './abi/SUPERSGD.json';
 
-const SmartContactController = () => {
+const SmartContactController = (uperWeb3) => {
 
-    const web3 = new Web3(new Web3.providers.HttpProvider('HTTP://127.0.0.1:7545'));
+    let web3 = uperWeb3 ? uperWeb3 : new Web3(new Web3.providers.HttpProvider('HTTP://127.0.0.1:7545'));
 
     const orderBookContract = new web3.eth.Contract(orderBookContractJson.abi, orderBookContractJson.address)
     const propertyAContract = new web3.eth.Contract(propertyAContractJson.abi, propertyAContractJson.address)
@@ -27,7 +27,6 @@ const SmartContactController = () => {
             contract.methods.allowance(from, by).call()
                 .then(allowance => {
                     if (allowance < amount) {
-                        console.log(amount - allowance);
                         contract.methods.approve(by, amount - allowance).send({ from: from })
                             .on('transactionHash', (hash) => {
                                 console.log('Transaction Hash:', hash);
@@ -134,30 +133,33 @@ const SmartContactController = () => {
                     .catch(err => reject(err));
             })
         },
+        getOrders: () => {
+            return new Promise((resolve, reject) => {
+                orderBookContract.methods.getAllOrders().call()
+                    .then(res => resolve(res))
+                    .catch(err => reject(err));
+            })
+        },
         placeOrder: (from, token, price, amount) => {
             return new Promise((resolve, reject) => {
-                window.ethereum.request({ method: 'eth_requestAccounts' })
+                checkAllowence(token, from, orderBookContract._address, amount * 10 ** 3)
                     .then(res => {
-                        console.log(res);
-                        checkAllowence(token, from, orderBookContract._address, amount * 10 ** 3)
-                        .then(res => {
-                            orderBookContract.methods.placeOrder(token, amount, price).send({ from: from })
-                                .on('transactionHash', (hash) => {
-                                    console.log('Transaction Hash:', hash);
-                                })
-                                .on('confirmation', (confirmationNumber, receipt) => {
-                                    console.log('Confirmation Number:', confirmationNumber);
-                                    console.log('Transaction Receipt:', receipt);
-                                })
-                                .on('receipt', (receipt) => {
-                                    console.log('Transaction has been included in the block:', receipt.blockNumber);
-                                    resolve(receipt);
-                                })
-                                .on('error', err => reject(err));
-                        })
+                        orderBookContract.methods.placeOrder(token, amount * 10 ** 3, price * 10 ** 2).send({ from: from })
+                            .on('transactionHash', (hash) => {
+                                console.log('Transaction Hash:', hash);
+                            })
+                            .on('confirmation', (confirmationNumber, receipt) => {
+                                console.log('Confirmation Number:', confirmationNumber);
+                                console.log('Transaction Receipt:', receipt);
+                            })
+                            .on('receipt', (receipt) => {
+                                console.log('Transaction has been included in the block:', receipt.blockNumber);
+                                resolve(receipt);
+                            })
+                            .on('error', err => reject(err));
                     })
-              
             })
+
         },
         checkAllowence: checkAllowence
     }

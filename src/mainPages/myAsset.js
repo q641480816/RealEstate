@@ -1,5 +1,5 @@
 import SmartContactController from '../smartContractController';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux'
 import { useEffect, useState } from 'react';
 import Card from '@mui/material/Card';
 import Typography from '@mui/material/Typography';
@@ -16,29 +16,27 @@ import FormControl from '@mui/material/FormControl';
 import Input from '@mui/material/Input';
 import InputAdornment from '@mui/material/InputAdornment';
 import FormHelperText from '@mui/material/FormHelperText';
+import { setLoader } from '../redux/loaderSlice';
 
 const MyAsset = (props) => {
 
     const wallet = useSelector(state => state.wallet.addr);
-    const smartContractController = SmartContactController();
-    const [sgdBalance, setSgdBalance] = useState("0.00");
-    const [propertyAsset, setPropertyAsset] = useState([]);
+    const sgdBalance = useSelector(state => state.wallet.sgdBalance);
+    const propertyAsset = useSelector(state => state.wallet.assetBalances);
     const properties = useSelector(state => state.property.properties);
     const [dialogOpen, setDialogOpen] = useState({ open: false });
     const [propertyAssetList, setPropertyAssetList] = useState([]);
     const [orderDetails, setOrderDetails] = useState({ units: "0", price: "0" })
+    const [smartContractController, setSmartContractController] = useState(null);
+    const myOrders = useSelector(state => state.wallet.myOrders);
+    const dispatch = useDispatch();
 
+    console.log(myOrders)
     useEffect(() => {
-        if (wallet) {
-            smartContractController.getSGDbyAddress(wallet)
-                .then(res => setSgdBalance(res))
-                .catch(err => console.log(err));
-
-            smartContractController.getTokenBalanceByAddress(wallet)
-                .then(res => setPropertyAsset(res.filter(p => Number(p.balance) > 0)))
-                .catch(err => console.log(err));
+        if(wallet && props.web3){
+            setSmartContractController(SmartContactController(props.web3));
         }
-    }, [wallet]);
+    }, [props, wallet])
 
     useEffect(() => {
         if (properties.length > 0 && propertyAsset.length > 0) {
@@ -109,8 +107,15 @@ const MyAsset = (props) => {
     }
 
     const placeOrder = () => {
-        smartContractController.placeOrder(wallet, dialogOpen.target.address, Number(orderDetails.price), Number(orderDetails.units));
-        // smartContractController.checkAllowence(dialogOpen.target.address, wallet, "0xDDE7c4dA8E5f9449586B0D60e3Ee60d1AAA63266", Number(orderDetails.units) * 10 ** 3);
+        dispatch(setLoader(true));
+        smartContractController.placeOrder(wallet, dialogOpen.target.address, Number(orderDetails.price), Number(orderDetails.units))
+            .then(res => {
+                dispatch(setLoader(false));
+            })
+            .catch(err => {
+                dispatch(setLoader(false))
+            });
+        closeDialog();
     }
 
     const render = () => {
