@@ -8,6 +8,14 @@ import CardContent from '@mui/material/CardContent';
 import img from '../resources/img.jpg';
 import '../index.css';
 import { Button } from '@mui/material';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogTitle from '@mui/material/DialogTitle';
+import FormControl from '@mui/material/FormControl';
+import Input from '@mui/material/Input';
+import InputAdornment from '@mui/material/InputAdornment';
+import FormHelperText from '@mui/material/FormHelperText';
 
 const MyAsset = (props) => {
 
@@ -15,7 +23,10 @@ const MyAsset = (props) => {
     const smartContractController = SmartContactController();
     const [sgdBalance, setSgdBalance] = useState("0.00");
     const [propertyAsset, setPropertyAsset] = useState([]);
-    const properties = useSelector(state => state.property.properties)
+    const properties = useSelector(state => state.property.properties);
+    const [dialogOpen, setDialogOpen] = useState({ open: false });
+    const [propertyAssetList, setPropertyAssetList] = useState([]);
+    const [orderDetails, setOrderDetails] = useState({ units: "0", price: "0" })
 
     useEffect(() => {
         if (wallet) {
@@ -29,11 +40,83 @@ const MyAsset = (props) => {
         }
     }, [wallet]);
 
+    useEffect(() => {
+        if (properties.length > 0 && propertyAsset.length > 0) {
+            const propertiesMap = Object.fromEntries(new Map(properties.map(i => [i.address, i])));
+            setPropertyAssetList(propertyAsset.map(p => {
+                return { ...propertiesMap[p.address], balance: p.balance }
+            }));
+        }
+    }, [propertyAsset, properties])
+
+    const renderSellDialog = () => {
+        return (
+            <Dialog
+                open={dialogOpen.open}
+                onClose={() => console.log('sell dialog closed')}
+                aria-labelledby="sellDialog"
+                aria-describedby="sellDialog to display sell details"
+            >
+                {dialogOpen.target ? (
+                    <div>
+                        <DialogTitle id="sellDialogTitle">
+                            {"Please fill in sell order details"}
+                        </DialogTitle>
+                        <DialogContent>
+                            <FormControl variant="standard" sx={{ m: 1, mt: 3, width: '25ch' }}>
+                                <Input
+                                    error={orderDetails['units'] > Number(dialogOpen.target["balance"])}
+                                    id="units-to-sell"
+                                    type="number"
+                                    value={orderDetails.units}
+                                    endAdornment={<InputAdornment position="end">units</InputAdornment>}
+                                    aria-describedby="units-to-sell-helper"
+                                    inputProps={{
+                                        'aria-label': 'units',
+                                    }}
+                                    onChange={e => setOrderDetails({ ...orderDetails, units: e.target.value.length - e.target.value.indexOf('.') > 3 && e.target.value.indexOf('.') > -1 ? e.target.value.substring(0, e.target.value.indexOf('.') + 4) : e.target.value })}
+                                />
+                                <FormHelperText id="standard-weight-helper-text">Units to Sell (Max: {dialogOpen.target.balance})</FormHelperText>
+                            </FormControl>
+                            <FormControl variant="standard" sx={{ m: 1, mt: 3, width: '25ch' }}>
+                                <Input
+                                    // error={orderDetails['units'] > Number(dialogOpen.target["balance"])}
+                                    id="price-to-sell"
+                                    type="number"
+                                    value={orderDetails.price}
+                                    endAdornment={<InputAdornment position="end">dollors</InputAdornment>}
+                                    aria-describedby="price-to-sell-helper"
+                                    inputProps={{
+                                        'aria-label': 'price per unit',
+                                    }}
+                                    onChange={e => setOrderDetails({ ...orderDetails, price: e.target.value.length - e.target.value.indexOf('.') > 3 && e.target.value.indexOf('.') > -1 ? e.target.value.substring(0, e.target.value.indexOf('.') + 3) : e.target.value  })}
+                                />
+                                <FormHelperText id="standard-weight-helper-text">price per unit</FormHelperText>
+                            </FormControl>
+                        </DialogContent>
+                        <DialogActions>
+                            <Button onClick={() => closeDialog()}>Cancel</Button>
+                            <Button onClick={() => placeOrder()}>Place Sell Order</Button>
+                        </DialogActions></div>
+                ) : null}
+            </Dialog>
+        )
+    }
+
+    const closeDialog = () => {
+        setDialogOpen({ open: false })
+        setOrderDetails({ units: "0", price: "0" });
+    }
+
+    const placeOrder = () => {
+        smartContractController.placeOrder(wallet, dialogOpen.target.address, Number(orderDetails.price), Number(orderDetails.units));
+        // smartContractController.checkAllowence(dialogOpen.target.address, wallet, "0xDDE7c4dA8E5f9449586B0D60e3Ee60d1AAA63266", Number(orderDetails.units) * 10 ** 3);
+    }
 
     const render = () => {
-        const propertiesMap = new Map(properties.map(i => [i.address, i]))
         return (
             <div style={{ padding: '20px' }}>
+                {renderSellDialog()}
                 <Typography gutterBottom variant="h3" component="div">
                     My MyAsset
                 </Typography>
@@ -47,29 +130,27 @@ const MyAsset = (props) => {
                             </div>
                         </div>
                     </Card>
-                    {propertyAsset.length === 0 ? <div style={{ padding: '10px' }}> You dont have any property asset in your balance.</div> : propertyAsset.map((p, i) => (
+                    {propertyAssetList.length === 0 ? <div style={{ padding: '10px' }}> You dont have any property asset in your balance.</div> : propertyAssetList.map((p, i) => (
                         <div key={i} style={{ marginBottom: '20px' }} className='flex-column'>
                             <Card className='flex-row'>
                                 <img src={img} style={{ height: '200px' }} />
-                                <CardContent className='flex-column' style={{justifyContent: 'space-between'}}>
+                                <CardContent className='flex-column' style={{ justifyContent: 'space-between' }}>
                                     <div>
                                         <Typography gutterBottom variant="h5" component="div">
-                                            {propertiesMap.get(p.address).propertyNmae}
+                                            {p.propertyNmae}
                                         </Typography>
                                         <Typography variant="body2" color="text.secondary">
-                                            Token Symbol: {propertiesMap.get(p.address).properdyId}
+                                            Token Symbol: {p.properdyId}
                                         </Typography>
                                         <Typography variant="body2" color="text.secondary">
-                                            Size: {propertiesMap.get(p.address).size} Squer Feet
+                                            Size: {p.size} Squer Feet
                                         </Typography>
                                         <Typography variant="body2" color="text.secondary">
                                             Your Balance: {p.balance} units
                                         </Typography>
                                     </div>
                                     <div>
-                                        <Button onClick={() => {
-                                            console.log('sell');
-                                        }}>Sell</Button>
+                                        <Button onClick={() => setDialogOpen({ open: true, target: p })}>Sell</Button>
                                     </div>
                                 </CardContent>
                             </Card>

@@ -20,6 +20,35 @@ const SmartContactController = () => {
     const tokenList = [propertyAContract, propertyBContract, propertyCContract, propertyDContract];
     // console.log(propertyAContract.methods)
 
+    const checkAllowence = (token, from, by, amount) => {
+        const contract = tokenList.filter(c => c._address === token)[0];
+
+        return new Promise((resolve, reject) => {
+            contract.methods.allowance(from, by).call()
+                .then(allowance => {
+                    if (allowance < amount) {
+                        console.log(amount - allowance);
+                        contract.methods.approve(by, amount - allowance).send({ from: from })
+                            .on('transactionHash', (hash) => {
+                                console.log('Transaction Hash:', hash);
+                            })
+                            .on('confirmation', (confirmationNumber, receipt) => {
+                                console.log('Confirmation Number:', confirmationNumber);
+                                console.log('Transaction Receipt:', receipt);
+                            })
+                            .on('receipt', (receipt) => {
+                                console.log('Transaction has been included in the block:', receipt.blockNumber);
+                                resolve(receipt)
+                            })
+                            .on('error', (err) => reject(err));
+                    } else {
+                        resolve()
+                    }
+                })
+                .catch(err => reject(err))
+        })
+    }
+
     return {
         getTokensInfo: () => {
             return new Promise((resolve, reject) => {
@@ -105,10 +134,32 @@ const SmartContactController = () => {
                     .catch(err => reject(err));
             })
         },
-
         placeOrder: (from, token, price, amount) => {
-
-        }
+            return new Promise((resolve, reject) => {
+                window.ethereum.request({ method: 'eth_requestAccounts' })
+                    .then(res => {
+                        console.log(res);
+                        checkAllowence(token, from, orderBookContract._address, amount * 10 ** 3)
+                        .then(res => {
+                            orderBookContract.methods.placeOrder(token, amount, price).send({ from: from })
+                                .on('transactionHash', (hash) => {
+                                    console.log('Transaction Hash:', hash);
+                                })
+                                .on('confirmation', (confirmationNumber, receipt) => {
+                                    console.log('Confirmation Number:', confirmationNumber);
+                                    console.log('Transaction Receipt:', receipt);
+                                })
+                                .on('receipt', (receipt) => {
+                                    console.log('Transaction has been included in the block:', receipt.blockNumber);
+                                    resolve(receipt);
+                                })
+                                .on('error', err => reject(err));
+                        })
+                    })
+              
+            })
+        },
+        checkAllowence: checkAllowence
     }
 }
 
