@@ -7,78 +7,130 @@ import Typography from '@mui/material/Typography';
 import CardContent from '@mui/material/CardContent';
 import { Button } from '@mui/material';
 import '../index.css';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogTitle from '@mui/material/DialogTitle';
+import FormControl from '@mui/material/FormControl';
+import Input from '@mui/material/Input';
+import InputAdornment from '@mui/material/InputAdornment';
+import FormHelperText from '@mui/material/FormHelperText';
 
 import img from '../resources/img.jpg';
 import { useEffect, useState } from 'react';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 
 import SmartContactController from '../smartContractController';
-
-const saleList = [];
-
-for (let i = 0; i < 4; i++) {
-    let list = [];
-    for (let y = 0; y < 7 + i; y++) {
-        list.push({
-            propertyId: i,
-            orderNum: i + '' + y,
-            price: Math.floor(Math.random() * 20 + 95),
-            amount: Math.floor(Math.random() * 300)
-        })
-    }
-
-    saleList.push({
-        properdyId: i,
-        propertyNmae: 'Property ' + i,
-        size: Math.floor(Math.random() * 300 + 600),
-        floor: list.reduce((acc, nxt) => acc < nxt.price ? acc : nxt.price, Math.max),
-        deals: list
-    })
-}
+import { setReload } from '../redux/walletSlice';
+import { setLoader } from '../redux/loaderSlice';
 
 const HotSale = (props) => {
-    const [colleps, setColleps] = useState(saleList.map(i => false));
     const wallet = useSelector(state => state.wallet.addr);
     const properties = useSelector(state => state.property.properties);
+    const [colleps, setColleps] = useState(properties.map(i => false));
+    const sgdBalance = useSelector(state => state.wallet.sgdBalance);
+    const [dialogOpen, setDialogOpen] = useState({ open: false });
+    const [orderDetails, setOrderDetails] = useState({ units: "0" })
+    const [smartContractController, setSmartContractController] = useState(null);
 
-    const smartContractController = SmartContactController();
+    const dispatch = useDispatch();
 
     useEffect(() => {
-
-    }, [properties]);
-
-    useEffect(() => {
-        if (wallet) {
-
+        if (wallet && props.web3) {
+            setSmartContractController(SmartContactController(props.web3));
         }
-    }, [wallet]);
+    }, [props, wallet])
 
-    const getDeals = () => {
-        // provider.reque
+    const closeDialog = () => {
+        setDialogOpen({ open: false })
+        setOrderDetails({ units: "0" });
+    }
 
+    const fulfillOrder = (id, units, price, seller) => {
+        dispatch(setLoader(true));
+        smartContractController.fulfillOrder(wallet, id, units, price, seller)
+            .then(res => {
+                dispatch(setLoader(false));
+                dispatch(setReload(true));
+            })
+            .catch(err => {
+                dispatch(setLoader(false))
+            });
+        closeDialog();
+    }
+
+    const renderBuyDialog = () => {
+        const max = dialogOpen.open ? (sgdBalance / (dialogOpen.target.pricePerToken * 0.1 ** 5)).toFixed(3) : 0;
+        return (
+            <Dialog
+                open={dialogOpen.open}
+                onClose={() => console.log('fulfill dialog closed')}
+                aria-labelledby="fulfillDialog"
+                aria-describedby="fulfillDialog to display fulfill details"
+            >
+                {dialogOpen.target ? (
+                    <div>
+                        <DialogTitle id="fulfillialogTitle">
+                            {"Please fill in units to fulfill"}
+                        </DialogTitle>
+                        <DialogContent className='flex-column'>
+                            <FormControl variant="standard" sx={{ m: 1, mt: 3, width: '25ch' }}>
+                                <Input
+                                    error={orderDetails['units'] > (dialogOpen.target.amount * 0.1 ** 3).toFixed(3)}
+                                    id="units-to-complete"
+                                    type="number"
+                                    value={orderDetails.units}
+                                    endAdornment={<InputAdornment position="end">units</InputAdornment>}
+                                    aria-describedby="units-to-complete-helper"
+                                    inputProps={{
+                                        'aria-label': 'units',
+                                    }}
+                                    onChange={e => setOrderDetails({ units: e.target.value.length - e.target.value.indexOf('.') > 3 && e.target.value.indexOf('.') > -1 ? e.target.value.substring(0, e.target.value.indexOf('.') + 4) : e.target.value })}
+                                />
+                                <FormHelperText id="standard-weight-helper-text" className='flex-column'>
+                                    <span>
+                                        Units to fulfill (Max: {max})
+                                    </span>
+                                    <span>
+                                        Total cost in SGD {(Number(orderDetails.units) * dialogOpen.target.pricePerToken * 0.1 ** 5).toFixed(2)}
+                                    </span>
+                                </FormHelperText>
+                            </FormControl>
+                            <Button onClick={() => setOrderDetails({ units: max })}>Max</Button>
+                        </DialogContent>
+                        <DialogActions>
+                            <Button onClick={() => closeDialog()}>Cancel</Button>
+                            <Button onClick={() => fulfillOrder(dialogOpen.target.id, orderDetails.units, dialogOpen.target.pricePerToken, dialogOpen.target.seller)}>Fulfill Order</Button>
+                        </DialogActions></div>
+                ) : null}
+            </Dialog>
+        )
     }
 
     const renderDeals = (list) => {
         return (<List>
-            {list.map((sale, i) => (
+            {list.map((o, i) => (
                 <Card style={{ marginBottom: '10px' }}>
                     <div style={{ padding: '10px', justifyContent: 'space-between' }} className='flex-row' >
                         <div>
-                            <Typography variant="body2" color="text.secondary">
-                                <span style={{ fontWeight: 'bold' }}>Order Number: # {sale.orderNum}</span>
+                            <Typography gutterBottom variant="h7" component="div">
+                                Order ID: {o.id}
                             </Typography>
                             <Typography variant="body2" color="text.secondary">
-                                price: {sale.price} $
+                                Units remain in order: {(o.amount * 0.1 ** 3).toFixed(3)} Square feets
                             </Typography>
                             <Typography variant="body2" color="text.secondary">
-                                Units: {sale.amount} Squer Feet
+                                Unit Price: {(o.pricePerToken * 0.1 ** 5).toFixed(2)} $ / Square feets
                             </Typography>
                             <Typography variant="body2" color="text.secondary">
-                                Sub: {sale.amount * sale.price} $
+                                Subtotal: {((o.amount * 0.1 ** 3) * (o.pricePerToken * 0.1 ** 5)).toFixed(2)} $
                             </Typography>
                         </div>
                         <div className='flex-row' style={{ justifyContent: 'center' }}>
-                            <Button>Buy</Button>
+                            {wallet && sgdBalance > (0.001 * (o.pricePerToken * 0.1 ** 5)).toFixed(2) ?
+                                <Button onClick={() => setDialogOpen({ open: true, target: o })}>Buy</Button>
+                                : <div>{wallet ? 'Insufficent SGD Balance' : 'Please connect wallet to buy'}</div>
+                            }
                         </div>
                     </div>
                 </Card>
@@ -87,6 +139,7 @@ const HotSale = (props) => {
     }
 
     return (<div style={{ padding: '20px' }}>
+        {renderBuyDialog()}
         <Typography gutterBottom variant="h3" component="div">
             Hot sale
         </Typography>
@@ -103,16 +156,18 @@ const HotSale = (props) => {
                                 Size: {sli.size} Squer Feet
                             </Typography>
                             <Typography variant="body2" color="text.secondary">
-                                Floor Price: {sli.floor} $
+                                Floor Price: {sli.orders.length > 0 ? (sli.orders.reduce((acc, next) => (acc > parseInt(next.pricePerToken) ? acc : parseInt(next.pricePerToken)), Math.max()) * 0.1 ** 5).toFixed(2) : 'NA'}
                             </Typography>
-                            <Button onClick={() => {
-                                const newC = [...colleps];
-                                newC[i] = !newC[i];
-                                setColleps(newC);
-                            }}>{colleps[i] ? 'Collaps' : 'See Deals'}</Button>
+                            {sli.orders.filter(o => o.seller.toLowerCase() !== (wallet ? wallet.toLowerCase() : '')).length > 0 ? (
+                                <Button onClick={() => {
+                                    const newC = [...colleps];
+                                    newC[i] = !newC[i];
+                                    setColleps(newC);
+                                }}>{colleps[i] ? 'Collaps' : 'See Deals'}</Button>
+                            ) : <div>No deal at this moment</div>}
                         </CardContent>
                     </Card>
-                    {colleps[i] ? (renderDeals(sli.deals)) : <div />}
+                    {sli.orders.filter(o => o.seller.toLowerCase() !== (wallet ? wallet.toLowerCase() : '')).length > 0 && colleps[i] ? (renderDeals(sli.orders)) : <div />}
                 </div>
             ))}
         </List>

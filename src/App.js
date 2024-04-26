@@ -41,36 +41,47 @@ const App = () => {
   }, [web3, provider])
 
   useEffect(() => {
-    const smcc = smartContractController ? smartContractController : SmartContactController()
-    smcc.getTokensInfo()
-      .then(res => {
-        dispatch(setProperty(res.map(p => {
-          return {
-            properdyId: p.symbol,
-            propertyNmae: p.name,
-            size: p.supply,
-            address: p.address
-          }
-        })))
-      })
-      .catch(err => console.log(err));
+    reloadProperties();
 
     if (wallet && web3) {
-      console.log('test')
       dispatch(setReload(true));
-      console.log(reload)
     }
   }, [wallet, web3]);
 
   useEffect(() => {
-    console.log(reload)
     if (reload && wallet) {
       dispatch(setReload(false));
       reloadUserAsset(wallet);
     }
   }, [wallet, reload])
 
+  const reloadProperties = () => {
+    const smcc = smartContractController ? smartContractController : SmartContactController()
+    smcc.getTokensInfo()
+      .then(res => {
+        smcc.getOrders()
+          .then(orders => {
+            const map = {};
+            orders.forEach(o => {
+              if (!(o.token in map)) map[o.token] = [];
+              map[o.token].push(o);
+            });
+
+            dispatch(setProperty(res.map(p => {
+              return {
+                properdyId: p.symbol,
+                propertyNmae: p.name,
+                size: p.supply,
+                address: p.address,
+                orders: p.address in map ? map[p.address] : []
+              }
+            })))
+          });
+      })
+  }
+
   const reloadUserAsset = (wallet) => {
+    reloadProperties();
     if (wallet) {
       smartContractController.getSGDbyAddress(wallet)
         .then(res => dispatch(setSgdBalance(res)))
@@ -82,8 +93,11 @@ const App = () => {
 
       smartContractController.getOrders()
         .then(res => {
-          res.foreach(r => console.log(r['seller']))
-          setMyOrders(res.filter(r => r['seller'] === (wallet+''))) 
+          const myOrders = [];
+          for (let i = 0; i < res.length; i++) {
+            if (res[i]['seller'].toLowerCase() === wallet.toLowerCase()) myOrders.push(res[i]);
+          }
+          dispatch(setMyOrders(myOrders))
         })
         .catch(err => console.log(err));
     }

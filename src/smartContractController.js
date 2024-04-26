@@ -1,4 +1,5 @@
 import Web3 from 'web3';
+import Decimal from 'decimal.js';
 import orderBookContractJson from './abi/SellOrderBook.json';
 import propertyAContractJson from './abi/PROPERTYA.json';
 import propertyBContractJson from './abi/PROPERTYB.json';
@@ -20,8 +21,14 @@ const SmartContactController = (uperWeb3) => {
     const tokenList = [propertyAContract, propertyBContract, propertyCContract, propertyDContract];
     // console.log(propertyAContract.methods)
 
+    const formatNumber = (n, p) => {
+        let BN = web3.utils.BN;
+        return new BN(Decimal(n).times(10 ** p).toString());
+    }
+
     const checkAllowence = (token, from, by, amount) => {
-        const contract = tokenList.filter(c => c._address === token)[0];
+        let contract = tokenList.filter(c => c._address === token)[0];
+        if (!contract) contract = sgdContract;
 
         return new Promise((resolve, reject) => {
             contract.methods.allowance(from, by).call()
@@ -129,7 +136,7 @@ const SmartContactController = (uperWeb3) => {
         getSGDbyAddress: (address) => {
             return new Promise((resolve, reject) => {
                 sgdContract.methods.balanceOf(address).call()
-                    .then(res => resolve((res * 0.1 ** 2).toFixed(2)))
+                    .then(res => resolve((res * 0.1 ** 5).toFixed(2)))
                     .catch(err => reject(err));
             })
         },
@@ -142,9 +149,9 @@ const SmartContactController = (uperWeb3) => {
         },
         placeOrder: (from, token, price, amount) => {
             return new Promise((resolve, reject) => {
-                checkAllowence(token, from, orderBookContract._address, amount * 10 ** 3)
+                checkAllowence(token, from, orderBookContract._address, formatNumber(amount, 3))
                     .then(res => {
-                        orderBookContract.methods.placeOrder(token, amount * 10 ** 3, price * 10 ** 2).send({ from: from })
+                        orderBookContract.methods.placeOrder(token, formatNumber(amount, 3), formatNumber(price, 5)).send({ from: from })
                             .on('transactionHash', (hash) => {
                                 console.log('Transaction Hash:', hash);
                             })
@@ -161,7 +168,47 @@ const SmartContactController = (uperWeb3) => {
             })
 
         },
-        checkAllowence: checkAllowence
+        checkAllowence: checkAllowence,
+        cancelOrder: (id, from) => {
+            return new Promise((resolve, reject) => {
+                orderBookContract.methods.cancelOrder(id).send({ from: from })
+                    .on('transactionHash', (hash) => {
+                        console.log('Transaction Hash:', hash);
+                    })
+                    .on('confirmation', (confirmationNumber, receipt) => {
+                        console.log('Confirmation Number:', confirmationNumber);
+                        console.log('Transaction Receipt:', receipt);
+                    })
+                    .on('receipt', (receipt) => {
+                        console.log('Transaction has been included in the block:', receipt.blockNumber);
+                        resolve(receipt);
+                    })
+                    .on('error', err => reject(err));
+            })
+        },
+        fulfillOrder: (from, id, units, price, seller) => {
+
+            return new Promise((resolve, reject) => {
+                console.log(price)
+                // console.log(formatNumber(price, 0))
+                    checkAllowence(sgdContract._address, from, orderBookContract._address, Decimal(units).times(price))
+                        .then(res => {
+                            orderBookContract.methods.fulfillOrder(id, formatNumber(units, 3)).send({ from: from })
+                                .on('transactionHash', (hash) => {
+                                    console.log('Transaction Hash:', hash);
+                                })
+                                .on('confirmation', (confirmationNumber, receipt) => {
+                                    console.log('Confirmation Number:', confirmationNumber);
+                                    console.log('Transaction Receipt:', receipt);
+                                })
+                                .on('receipt', (receipt) => {
+                                    console.log('Transaction has been included in the block:', receipt.blockNumber);
+                                    resolve(receipt);
+                                })
+                                .on('error', err => reject(err));
+                        })
+            })
+        }
     }
 }
 
