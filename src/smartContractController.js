@@ -187,7 +187,6 @@ const SmartContactController = (uperWeb3) => {
             })
         },
         fulfillOrder: (from, id, units, price, seller) => {
-
             return new Promise((resolve, reject) => {
                 console.log(price)
                 // console.log(formatNumber(price, 0))
@@ -207,6 +206,13 @@ const SmartContactController = (uperWeb3) => {
                                 })
                                 .on('error', err => reject(err));
                         })
+            })
+        },
+        getHistories: (addr) => {
+            return new Promise((resolve, reject) => {
+                orderBookContract.methods.getHistoryByAddress(addr).call()
+                    .then(res => resolve(res))
+                    .catch(err => reject(err));
             })
         }
     }

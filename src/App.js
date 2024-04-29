@@ -6,7 +6,7 @@ import BrowseHistory from './mainPages/bHistory';
 import HotSale from './mainPages/hotSale';
 import { useSelector, useDispatch } from 'react-redux'
 import { Button } from '@mui/material';
-import { setWallet, setAssetBalances, setMyOrders, setSgdBalance, setReload } from './redux/walletSlice';
+import { setWallet, setAssetBalances, setMyOrders, setSgdBalance, setReload, setHistories } from './redux/walletSlice';
 import React, { useEffect, useState } from 'react';
 import detectEthereumProvider from "@metamask/detect-provider";
 import Web3 from 'web3';
@@ -100,6 +100,10 @@ const App = () => {
           dispatch(setMyOrders(myOrders))
         })
         .catch(err => console.log(err));
+
+        smartContractController.getHistories(wallet)
+          .then(res=> dispatch(setHistories(res)))
+          .catch(err => console.log(err));
     }
   }
 

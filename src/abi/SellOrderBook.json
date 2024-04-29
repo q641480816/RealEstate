@@ -1,6 +1,6 @@
 {
   "contractName": "SellOrderBook",
-  "address" : "0xecE5b30d14df67176e63FeB04fCb98592199f778",
+  "address": "0x43B6788FCbCa3ba878Ab581F7d63634dA7b8cd1b",
   "abi": [
     {
       "inputs": [
@@ -20971,12 +20971,12 @@
         }
       },
       "links": {},
-      "address": "0xecE5b30d14df67176e63FeB04fCb98592199f778",
-      "transactionHash": "0xcd382adf5053974afab4a306112e828eef5c1803ffdf11ba58d734a777e68f84"
+      "address": "0x43B6788FCbCa3ba878Ab581F7d63634dA7b8cd1b",
+      "transactionHash": "0x06fc718ed5d3e09fb551166ca8f7e2dc7e6b92467cfcf02f649bbcb6e6fb4d38"
     }
   },
   "schemaVersion": "3.4.16",
-  "updatedAt": "2024-04-26T08:33:50.032Z",
+  "updatedAt": "2024-04-29T07:52:21.938Z",
   "networkType": "ethereum",
   "devdoc": {
     "kind": "dev",

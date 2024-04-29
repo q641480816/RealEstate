@@ -7,7 +7,8 @@ export const walletSlice = createSlice({
         myOrders: [],
         assetBalances: [],
         sgdBalance: "0.00",
-        reload: false
+        reload: false,
+        history: []
     },
     reducers: {
         setWallet: (state, action) => {
@@ -24,10 +25,13 @@ export const walletSlice = createSlice({
         },
         setReload: (state, action) => {
             state.reload = action.payload
+        },
+        setHistories: (state, action) => {
+            state.history = action.payload
         }
     },
 })
 
-export const { setWallet, setMyOrders, setAssetBalances, setSgdBalance, setReload } = walletSlice.actions;
+export const { setWallet, setMyOrders, setAssetBalances, setSgdBalance, setReload, setHistories} = walletSlice.actions;
 
 export default walletSlice.reducer;

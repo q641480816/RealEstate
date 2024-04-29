@@ -127,7 +127,7 @@ const HotSale = (props) => {
                             </Typography>
                         </div>
                         <div className='flex-row' style={{ justifyContent: 'center' }}>
-                            {wallet && sgdBalance > (0.001 * (o.pricePerToken * 0.1 ** 5)).toFixed(2) ?
+                            {wallet && Number(sgdBalance) > (0.001 * (o.pricePerToken * 0.1 ** 5)).toFixed(2) ?
                                 <Button onClick={() => setDialogOpen({ open: true, target: o })}>Buy</Button>
                                 : <div>{wallet ? 'Insufficent SGD Balance' : 'Please connect wallet to buy'}</div>
                             }
